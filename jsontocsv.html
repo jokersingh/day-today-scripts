@@ -1,0 +1,63 @@
+<html>
+    <head></head>
+    <body>
+        <script>
+            var inputArray = [{
+        id: '0001',
+        name: 'Jetson, George',
+        place:'[{Hyde,abc}]'
+    }, {
+        id: '0002',
+        name: 'Jetson, Jane',
+        alt: 'Jane, his wife.'
+    }, {
+        id: '0003',
+        name: 'Jetson, Judith',
+        alt: 'Daughter Judy'
+    }, {
+        id: '0004',
+        name: 'Jetson, Elroy',
+        alt: 'Boy Elroy'
+    }, {
+        id: 'THX1138',
+        name: 'Rosie The Maid',
+        alt: 'Rosie'
+    }];
+    var filename = 'JetsonData.csv';
+    var columnHeader;
+            var getHeader = function() {
+                    if (columnHeader) return columnHeader;
+                    columnHeader = [];
+                    for (var i in inputArray) {
+                        var keys = Object.keys(inputArray[i]);
+                        for (var j in keys) {
+                            var key = keys[j];
+                            columnHeader[key] = key
+                        }
+                    }
+                    return columnHeader
+                },
+                convertArrayOfObjectsToCSV = function() {
+                    var result, ctr, keys, columnDelimiter, lineDelimiter, header = getHeader() || null;
+                    return null === header ? null : (columnDelimiter = ",", lineDelimiter = "\n", keys = Object.keys(header), result = "", keys.forEach(function(key) {
+                        var dataVal = header[key];
+                        void 0 === dataVal && (dataVal = ""), result += '"' + dataVal + '"' + columnDelimiter
+                    }), result += columnDelimiter, result += lineDelimiter, inputArray.forEach(function(item) {
+                        ctr = 0, keys.forEach(function(key) {
+                            ctr > 0 && (result += columnDelimiter);
+                            var dataVal = item[key];
+                            void 0 === dataVal && (dataVal = ""), result += '"' + dataVal + '"', ctr++
+                        }), result += lineDelimiter
+                    }), result)
+                },
+                generateCSVLink = function() {
+                    void 0 === filename && (filename = "export.csv");
+                    var csv = convertArrayOfObjectsToCSV();
+                    console.log(csv);
+                    null !== csv && (csv.match(/^data:text\/csv/i) || (csv = "data:text/csv;charset=utf-8," + csv), hreflink = encodeURI(csv))
+                };
+            generateCSVLink()
+
+        </script>
+    </body>
+</html>
