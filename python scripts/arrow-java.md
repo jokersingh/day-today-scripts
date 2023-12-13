@@ -83,30 +83,8 @@ Remember that disabling SSL verification weakens the security of your applicatio
 * Refer to the Apache Arrow documentation for more information on reading Parquet files: [https://arrow.apache.org/cookbook/java/io.html](https://arrow.apache.org/cookbook/java/io.html)
 
 By following these steps, you can read a Parquet file from an S3 bucket using Apache Arrow in Java, even with SSL verification disabled.
-/**
-import org.apache.arrow.dataset.jni.NativeDatasetFactory;
-import org.apache.arrow.dataset.file.FileFormat;
-import org.apache.arrow.dataset.source.Dataset;
-import org.apache.arrow.dataset.source.DatasetFactory;
-import org.apache.arrow.dataset.source.DatasetSource;
-import org.apache.arrow.dataset.source.ipc.ReadOptions;
-import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
-import org.apache.arrow.vector.ipc.message.MessageSerializer;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
-import software.amazon.awssdk.http.apache.ApacheHttpClient;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
 
-import javax.net.ssl.SSLContext;
-import java.io.InputStream;
-import java.util.Iterator;
-import java.util.List;
-
-**/
-
+```
 
 import org.apache.arrow.dataset.jni.NativeDatasetFactory;
 import org.apache.arrow.dataset.file.FileFormat;
@@ -182,3 +160,4 @@ public class ReadParquetFromS3SSL {
         s3.close();
     }
 }
+```
