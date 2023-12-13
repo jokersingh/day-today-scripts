@@ -86,7 +86,8 @@ By following these steps, you can read a Parquet file from an S3 bucket using Ap
 
 
 
-import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import org.apache.arrow.memory.RootAllocator;
@@ -109,17 +110,17 @@ public class ReadParquetFromS3 {
         String key = "your_file_name.parquet"; // Replace with your file name
         String region = "your_aws_region";
 
-        S3Client s3 = S3Client.builder().region(region).build();
+        S3Client s3 = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(key)
                 .build();
 
-        ResponseInputStream<org.apache.http.entity.InputStreamEntity> objectInputStream = s3.getObject(getObjectRequest);
-
-        InputStream inputStream = objectInputStream.orElseThrow(() -> new IOException("Error retrieving object from S3"))
-                .asInputStream();
+        InputStream inputStream = s3.getObject(getObjectRequest);
 
         ReadableByteChannel channel = Channels.newChannel(inputStream);
 
@@ -133,20 +134,20 @@ public class ReadParquetFromS3 {
         Schema arrowSchema = ParquetToArrowSchemaConverter.convert(parquetSchema);
 
         // Initialize Arrow reader
-        ArrowStreamReader arrowStreamReader = new ArrowStreamReader(channel, new RootAllocator(Long.MAX_VALUE), parquetMetadata);
+        ArrowFileReader arrowFileReader = new ArrowFileReader(channel, new RootAllocator(Long.MAX_VALUE));
 
-        // Read Arrow file
-        VectorSchemaRoot root = arrowStreamReader.getVectorSchemaRoot();
+        VectorSchemaRoot root = arrowFileReader.getVectorSchemaRoot();
 
-        while (arrowStreamReader.loadNextBatch()) {
+        while (arrowFileReader.loadNextBatch()) {
             // Process data from the Arrow file
             // Access data via vectors in the VectorSchemaRoot
         }
 
         // Clean up resources
-        arrowStreamReader.close();
+        arrowFileReader.close();
         channel.close();
         s3.close();
     }
 }
+
 
