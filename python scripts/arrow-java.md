@@ -228,3 +228,76 @@ public class FetchParquetFromS3 {
 This program demonstrates a simple way to use ArrowPy from Java to fetch a Parquet file from an S3 bucket. Feel free to customize it further to suit your specific needs.
 
 ```
+
+
+
+## Java Program to Read Parquet File from S3 with Beam and Decimal Precision
+
+Here's a Java program that reads a Parquet file from an S3 bucket using Apache Beam, converts it to a Beam schema, and allows decimal types with precision:
+
+```java
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.parquet.ParquetIO;
+import org.apache.beam.sdk.schemas.Schema;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.parquet.avro.AvroSchemaConverter;
+import org.apache.parquet.schema.MessageType;
+
+public class ReadParquetToBeam {
+
+  public static void main(String[] args) throws Exception {
+    Pipeline pipeline = Pipeline.create();
+
+    // Define S3 bucket and file path
+    String s3Bucket = "your-bucket-name";
+    String filePath = "path/to/parquet-file.parquet";
+
+    // Read Parquet file from S3
+    PCollection<FileIO.ReadableFile> files = pipeline.apply(FileIO.match()
+        .filepattern("s3://" + s3Bucket + "/" + filePath));
+
+    // Convert Parquet schema to Avro schema
+    MessageType parquetSchema = new AvroParquetReader().readFooter(files.getPipeline().getOptions(), files.apply(FileIO.readMatches()).apply(FileIO.readBytes()));
+    Schema avroSchema = new AvroSchemaConverter().convert(parquetSchema);
+
+    // Add Beam schema converter for decimal types
+    Schema beamSchema = convertAvroSchemaToBeamSchema(avroSchema);
+
+    // Read Parquet file and convert to Beam PCollection
+    PCollection<GenericRecord> records = files.apply(ParquetIO.readFiles(beamSchema));
+
+    // Process records
+
+    // ...
+
+    pipeline.run();
+  }
+
+  private static Schema convertAvroSchemaToBeamSchema(Schema avroSchema) {
+    Schema.Builder builder = Schema.builder();
+    for (Schema.Field field : avroSchema.getFields()) {
+      if (field.getType().equals(Schema.FieldType.DECIMAL)) {
+        builder.addField(field.getName(), Schema.FieldType.DECIMAL(field.getPrecision(), field.getScale()));
+      } else {
+        builder.addField(field.getName(), field.getType());
+      }
+    }
+    return builder.build();
+  }
+}
+```
+
+This program performs the following steps:
+
+1. Defines the S3 bucket and file path for the Parquet file.
+2. Reads the Parquet file from S3 using `FileIO.match` and `FileIO.readMatches`.
+3. Converts the Parquet schema to an Avro schema using `AvroParquetReader` and `AvroSchemaConverter`.
+4. Defines a custom `convertAvroSchemaToBeamSchema` function to convert the Avro schema to a Beam schema, where it specifically identifies and handles decimal types with precision.
+5. Reads the Parquet file and converts it to a Beam PCollection of `GenericRecord` objects using `ParquetIO.readFiles` with the converted Beam schema.
+
+This program allows you to read Parquet files with decimal types from S3 using Apache Beam and convert them to a Beam schema while preserving the decimal precision.
+
+**Note:** This program assumes you have the necessary dependencies for Apache Beam and Avro included in your project. You can add them using your preferred build tool.
