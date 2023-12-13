@@ -86,68 +86,77 @@ By following these steps, you can read a Parquet file from an S3 bucket using Ap
 
 
 
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import org.apache.arrow.dataset.jni.NativeDatasetFactory;
+import org.apache.arrow.dataset.file.FileFormat;
+import org.apache.arrow.dataset.source.Dataset;
+import org.apache.arrow.dataset.source.DatasetFactory;
+import org.apache.arrow.dataset.source.DatasetSource;
+import org.apache.arrow.dataset.source.ipc.ReadOptions;
+import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
+import org.apache.arrow.vector.ipc.message.MessageSerializer;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import org.apache.arrow.memory.RootAllocator;
-import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.ipc.ArrowFileReader;
-import org.apache.arrow.vector.ipc.ArrowStreamReader;
-import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.parquet.hadoop.ParquetFileReader;
-import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import software.amazon.awssdk.services.s3.S3Configuration;
 
-import java.io.IOException;
+import javax.net.ssl.SSLContext;
 import java.io.InputStream;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
+import java.util.Iterator;
+import java.util.List;
 
-public class ReadParquetFromS3 {
+public class ReadParquetFromS3SSL {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         String bucketName = "your_bucket_name";
         String key = "your_file_name.parquet"; // Replace with your file name
         String region = "your_aws_region";
 
+        AwsCredentialsProvider credentialsProvider = EnvironmentVariableCredentialsProvider.create();
+
+        S3Configuration s3Configuration = S3Configuration.builder()
+                .checksumValidationEnabled(false) // Optionally disable checksum validation
+                .build();
+
+        SSLContext sslContext = SSLContext.getDefault(); // Replace this with your SSL context setup
+
+        ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
+                .sslContext(sslContext);
+
         S3Client s3 = S3Client.builder()
+                .credentialsProvider(credentialsProvider)
                 .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create())
+                .httpClientBuilder(httpClientBuilder)
+                .serviceConfiguration(s3Configuration)
                 .build();
 
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
+        DatasetFactory datasetFactory = NativeDatasetFactory.builder()
+                .rootAllocator(new RootAllocator(Long.MAX_VALUE))
                 .build();
 
-        InputStream inputStream = s3.getObject(getObjectRequest);
+        String s3Path = "s3://" + bucketName + "/" + key;
+        DatasetSource datasetSource = datasetFactory.finishFile(s3Path, FileFormat.PARQUET);
 
-        ReadableByteChannel channel = Channels.newChannel(inputStream);
+        ReadOptions readOptions = ReadOptions.builder().build();
+        Dataset dataset = datasetSource.finish(readOptions);
 
-        // Read Parquet file metadata
-        ParquetMetadata parquetMetadata = ParquetFileReader.readFooter(channel, ParquetMetadataConverter.NO_FILTER);
+        Iterator<ArrowRecordBatch> iterator = dataset.scan().iterator();
 
-        // Get Parquet schema
-        org.apache.parquet.schema.MessageType parquetSchema = parquetMetadata.getFileMetaData().getSchema();
+        while (iterator.hasNext()) {
+            ArrowRecordBatch recordBatch = iterator.next();
+            List<ArrowRecordBatch> batches = List.of(recordBatch);
 
-        // Convert Parquet schema to Arrow schema
-        Schema arrowSchema = ParquetToArrowSchemaConverter.convert(parquetSchema);
-
-        // Initialize Arrow reader
-        ArrowFileReader arrowFileReader = new ArrowFileReader(channel, new RootAllocator(Long.MAX_VALUE));
-
-        VectorSchemaRoot root = arrowFileReader.getVectorSchemaRoot();
-
-        while (arrowFileReader.loadNextBatch()) {
-            // Process data from the Arrow file
-            // Access data via vectors in the VectorSchemaRoot
+            // Process batches here
+            // Example: Serialize batches to bytes
+            for (ArrowRecordBatch batch : batches) {
+                InputStream inputStream = MessageSerializer.serialize(recordBatch);
+                // Process the InputStream or batches as needed
+            }
         }
 
-        // Clean up resources
-        arrowFileReader.close();
-        channel.close();
+        // Close resources
         s3.close();
     }
 }
-
-
