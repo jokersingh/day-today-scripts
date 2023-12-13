@@ -161,3 +161,70 @@ public class ReadParquetFromS3SSL {
     }
 }
 ```
+
+
+```
+Here's a Java program to call the ArrowPy library to fetch a Parquet file from an S3 bucket:
+
+```java
+import org.python.util.PythonInterpreter;
+
+public class FetchParquetFromS3 {
+
+    public static void main(String[] args) throws Exception {
+        // Replace these values with your own
+        String s3BucketName = "your-bucket-name";
+        String s3ObjectKey = "your-parquet-file-key";
+        String localOutputPath = "/path/to/local/output/file.parquet";
+
+        // Create a Python interpreter
+        PythonInterpreter interpreter = new PythonInterpreter();
+
+        // Import necessary Python libraries
+        interpreter.exec("import pyarrow as pa");
+        interpreter.exec("import s3fs");
+
+        // Define S3 file system object
+        String s3FileSystem = String.format("s3://%s/%s", s3BucketName, s3ObjectKey);
+        interpreter.set("s3_file_system", s3FileSystem);
+
+        // Read Parquet file from S3 using ArrowPy
+        interpreter.exec("table = pa.parquet.read_table(s3_file_system)");
+
+        // Save the Parquet table to a local file
+        interpreter.exec("table.to_parquet(localOutputPath)");
+
+        // Close the Python interpreter
+        interpreter.close();
+    }
+}
+```
+
+**Explanation:**
+
+1. **Import libraries:** We import the `PythonInterpreter` class from the Jython library to run Python code from Java. We also import the necessary Python libraries inside the interpreter:
+    * `pyarrow`: Provides access to Arrow functionalities.
+    * `s3fs`: Provides access to the S3 file system.
+2. **Define S3 file system:** We create the S3 file system object using the bucket name and object key.
+3. **Read Parquet file:** We use `pa.parquet.read_table` from `pyarrow` to read the Parquet data from the S3 file system.
+4. **Save to local file:** We use `table.to_parquet` to write the Parquet data to a local file.
+5. **Close interpreter:** We close the Python interpreter to release resources.
+
+**Requirements:**
+
+* Java
+* Jython
+* Python
+* ArrowPy library (pip install pyarrow)
+* S3fs library (pip install s3fs)
+* AWS credentials configured for the S3 client
+
+**Note:**
+
+* This example assumes you have basic knowledge of Java and Python.
+* Ensure you have the necessary libraries installed before running the program.
+* Remember to replace the placeholders with your actual S3 bucket name, object key, and local output path.
+
+This program demonstrates a simple way to use ArrowPy from Java to fetch a Parquet file from an S3 bucket. Feel free to customize it further to suit your specific needs.
+
+```
