@@ -83,3 +83,70 @@ Remember that disabling SSL verification weakens the security of your applicatio
 * Refer to the Apache Arrow documentation for more information on reading Parquet files: [https://arrow.apache.org/cookbook/java/io.html](https://arrow.apache.org/cookbook/java/io.html)
 
 By following these steps, you can read a Parquet file from an S3 bucket using Apache Arrow in Java, even with SSL verification disabled.
+
+
+
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.ArrowFileReader;
+import org.apache.arrow.vector.ipc.ArrowStreamReader;
+import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.parquet.hadoop.ParquetFileReader;
+import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+
+public class ReadParquetFromS3 {
+
+    public static void main(String[] args) throws IOException {
+        String bucketName = "your_bucket_name";
+        String key = "your_file_name.parquet"; // Replace with your file name
+        String region = "your_aws_region";
+
+        S3Client s3 = S3Client.builder().region(region).build();
+
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build();
+
+        ResponseInputStream<org.apache.http.entity.InputStreamEntity> objectInputStream = s3.getObject(getObjectRequest);
+
+        InputStream inputStream = objectInputStream.orElseThrow(() -> new IOException("Error retrieving object from S3"))
+                .asInputStream();
+
+        ReadableByteChannel channel = Channels.newChannel(inputStream);
+
+        // Read Parquet file metadata
+        ParquetMetadata parquetMetadata = ParquetFileReader.readFooter(channel, ParquetMetadataConverter.NO_FILTER);
+
+        // Get Parquet schema
+        org.apache.parquet.schema.MessageType parquetSchema = parquetMetadata.getFileMetaData().getSchema();
+
+        // Convert Parquet schema to Arrow schema
+        Schema arrowSchema = ParquetToArrowSchemaConverter.convert(parquetSchema);
+
+        // Initialize Arrow reader
+        ArrowStreamReader arrowStreamReader = new ArrowStreamReader(channel, new RootAllocator(Long.MAX_VALUE), parquetMetadata);
+
+        // Read Arrow file
+        VectorSchemaRoot root = arrowStreamReader.getVectorSchemaRoot();
+
+        while (arrowStreamReader.loadNextBatch()) {
+            // Process data from the Arrow file
+            // Access data via vectors in the VectorSchemaRoot
+        }
+
+        // Clean up resources
+        arrowStreamReader.close();
+        channel.close();
+        s3.close();
+    }
+}
+
