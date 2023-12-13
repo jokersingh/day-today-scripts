@@ -301,3 +301,34 @@ This program performs the following steps:
 This program allows you to read Parquet files with decimal types from S3 using Apache Beam and convert them to a Beam schema while preserving the decimal precision.
 
 **Note:** This program assumes you have the necessary dependencies for Apache Beam and Avro included in your project. You can add them using your preferred build tool.
+
+
+
+
+
+```
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.fs.ResolveOptions;
+import org.apache.beam.sdk.io.parquet.ParquetIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.values.Row;
+
+public class ReadParquetFromS3 {
+    public static void main(String[] args) {
+        PipelineOptions options = PipelineOptionsFactory.create();
+        Pipeline pipeline = Pipeline.create(options);
+
+        String s3FilePath = "s3://your-bucket-name/your-parquet-file.parquet";
+
+        pipeline
+            .apply("ReadFromS3", FileIO.match().filepattern(s3FilePath))
+            .apply(FileIO.readMatches().withCompression(ResolveOptions.StandardResolveOptions.RESOLVE_FILE))
+            .apply("ReadParquetFiles", ParquetIO.readFiles(Row.class))
+            .apply("ProcessRecords", ...); // Add further processing or writing logic here
+
+        pipeline.run().waitUntilFinish();
+    }
+}
+```
