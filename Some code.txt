@@ -1,0 +1,51 @@
+import org.apache.arrow.dataset.FileSystemDatasetFactory;
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.ipc.ReadOptions;
+import org.apache.arrow.vector.ipc.message.MessageSerializer;
+import org.apache.arrow.vector.ipc.ReadChannel;
+import org.apache.arrow.vector.types.pojo.Schema;
+
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+
+public class ReadParquetFromS3 {
+    public static void main(String[] args) throws IOException {
+        String bucketName = "YOUR_BUCKET_NAME";
+        String key = "YOUR_FILE_KEY";
+        Region region = Region.YOUR_REGION;
+        
+        AwsCredentialsProvider credentialsProvider = DefaultCredentialsProvider.create();
+        S3Client s3 = S3Client.builder().region(region).credentialsProvider(credentialsProvider).build();
+
+        FileSystemDatasetFactory factory = new FileSystemDatasetFactory();
+        factory.setFileSystem(URI.create("s3://" + bucketName), s3);
+        
+        // Adjust the path to your file in S3
+        String path = "s3://" + bucketName + "/" + key;
+        
+        try (ReadableByteChannel channel = Channels.newChannel(s3.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build()));
+             InputStream inputStream = Channels.newInputStream(channel)) {
+            ReadChannel readChannel = ReadChannel.wrap(inputStream);
+            Schema schema = factory.inspect(path);
+            
+            RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+            ReadOptions options = new ReadOptions();
+            options.useZeroCopy(true);
+            
+            MessageSerializer.deserializeSchema(readChannel, allocator);
+            // Read the Parquet file contents here using Arrow APIs
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
