@@ -49,3 +49,31 @@ public class ReadParquetFromS3 {
         }
     }
 }
+public class SplitString {
+
+    public static String[] splitWithQuotes(String text) {
+        StringBuilder currentWord = new StringBuilder();
+        boolean inQuotes = false;
+        List<String> words = new ArrayList<>();
+
+        for (char c : text.toCharArray()) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                words.add(currentWord.toString());
+                currentWord.setLength(0);
+            } else {
+                currentWord.append(c);
+            }
+        }
+
+        words.add(currentWord.toString());
+        return words.toArray(new String[0]);
+    }
+
+    public static void main(String[] args) {
+        String text = "This is a, string \"with, commas\" and another word.";
+        String[] words = splitWithQuotes(text);
+        System.out.println(Arrays.toString(words));
+    }
+}
