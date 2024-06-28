@@ -77,3 +77,20 @@ public class SplitString {
         System.out.println(Arrays.toString(words));
     }
 }
+
+
+## Subject: Farewell and Best Wishes!
+
+Hi Team,
+
+Today marks my last day at Capital One. As I move on to new opportunities, I wanted to take a moment to express my sincere gratitude to each and every one of you. 
+
+Working alongside all of you has been a true pleasure. I've learned so much from your expertise and guidance, especially Gopi, Suresh, Priya, James, and Sal. 
+
+A huge thank you also goes out to Ramya, Shyam, Zac, Chinmay, Navya, and the rest of the amazing team for your unwavering support and collaboration throughout my time here. You've all made a significant impact on my experience.
+
+I wish you all continued success in your endeavors. I have no doubt you'll continue to achieve great things. Here's hoping our paths cross again in the future!
+
+Best regards,
+
+[Your Name] 
